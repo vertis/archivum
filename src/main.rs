@@ -2,10 +2,33 @@ use duct::cmd;
 use serde_json::Value;
 use std::path::Path;
 
+use clap::{arg, command, value_parser};
+use std::path::PathBuf;
+
 fn main() {
-    let user_or_org = "vertis"; // Replace with the actual user or org name
-    let base_output_dir = "mirror"; // Replace with the actual base output directory path
-    let output_dir = format!("{}/{}", base_output_dir, user_or_org); // Construct the full output directory path
+    let matches = command!("live-mirror")
+        .version("0.1.0")
+        .author("Your Name <your.email@example.com>")
+        .about("Mirrors GitHub repositories for a specified user or organization")
+        .arg(
+            arg!(
+                -u --"user-org" <USER_OR_ORG> "Specifies the GitHub user or organization"
+            )
+            .required(true)
+            .value_parser(value_parser!(String)),
+        )
+        .arg(
+            arg!(
+                -b --basedir <BASE_OUTPUT_DIR> "Specifies the base output directory where repositories will be mirrored"
+            )
+            .required(true)
+            .value_parser(value_parser!(PathBuf)),
+        )
+        .get_matches();
+
+    let user_or_org = matches.get_one::<String>("user-org").expect("required");
+    let base_output_dir = matches.get_one::<PathBuf>("basedir").expect("required");
+    let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
 
     let repos = get_repositories(user_or_org).unwrap_or_else(|e| {
         eprintln!("Failed to list repositories: {}", e);
