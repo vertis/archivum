@@ -45,6 +45,10 @@ fn update_repository(repo_path: &str, repo: &str) {
     if let Err(e) = cmd!("git", "--git-dir", repo_path, "fetch", "--all").run() {
         eprintln!("Failed to fetch changes for repository {}: {}", repo, e);
     }
+    // Handle LFS objects after fetching changes
+    if let Err(e) = cmd!("git", "lfs", "fetch", "--all", repo_path).run() {
+        eprintln!("Failed to fetch LFS objects for repository {}: {}", repo, e);
+    }
 }
 
 fn clone_repository(user_or_org: &str, repo: &str, repo_path: &str) {
@@ -58,5 +62,15 @@ fn clone_repository(user_or_org: &str, repo: &str, repo_path: &str) {
     .run()
     {
         eprintln!("Failed to clone repository {}: {}", repo, e);
+    }
+    // Initialize and fetch LFS objects after cloning
+    if let Err(e) = cmd!("git", "lfs", "install").run() {
+        eprintln!(
+            "Failed to initialize Git LFS for repository {}: {}",
+            repo, e
+        );
+    }
+    if let Err(e) = cmd!("git", "lfs", "fetch", "--all", repo_path).run() {
+        eprintln!("Failed to fetch LFS objects for repository {}: {}", repo, e);
     }
 }
