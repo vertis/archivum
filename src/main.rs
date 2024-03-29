@@ -255,6 +255,31 @@ fn main() {
                     ),
             )
             .subcommand(
+                command!("download-repo")
+                    .about("Downloads a specific repository for the specified user or organization")
+                    .arg(
+                        arg!(
+                            -u --"user-org" <USER_ORG> "Specifies the GitHub user or organization"
+                        )
+                        .required(true)
+                        .value_parser(value_parser!(String)),
+                    )
+                    .arg(
+                        arg!(
+                            -r --repo <REPO_NAME> "Specifies the name of the repository to download"
+                        )
+                        .required(true)
+                        .value_parser(value_parser!(String)),
+                    )
+                    .arg(
+                        arg!(
+                            -b --basedir <BASE_OUTPUT_DIR> "Specifies the base output directory where the repository will be mirrored"
+                        )
+                        .required(true)
+                        .value_parser(value_parser!(PathBuf)),
+                    ),
+            )
+            .subcommand(
                 command!("upload")
                     .about("Uploads mirrored repositories to a specified destination")
                     .arg(
@@ -287,6 +312,15 @@ fn main() {
 
                 process_repositories(&repos, &output_dir, user_or_org);
             }
+            Some(("download-repo", sub_matches)) => {
+                let user_or_org = sub_matches.get_one::<String>("user-org").expect("required");
+                let repo_name = sub_matches.get_one::<String>("repo").expect("required");
+                let base_output_dir = sub_matches.get_one::<PathBuf>("basedir").expect("required");
+                let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
+
+                println!("Processing single repository: {}/{}", user_or_org, repo_name);
+                process_repository(repo_name, &output_dir, user_or_org);
+            },
             Some(("upload", sub_matches)) => {
                 let destination = sub_matches.get_one::<String>("destination").expect("required");
                 let path = sub_matches.get_one::<PathBuf>("path").expect("required");
