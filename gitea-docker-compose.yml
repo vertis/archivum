@@ -1,0 +1,51 @@
+version: "3"
+
+networks:
+  gitea:
+    external: false
+
+volumes:
+  gitea:
+    driver: local
+  postgres:
+    driver: local
+services:
+  server:
+    image: gitea/gitea:1.21.4
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=gitea
+      - GITEA__security__SECRET_KEY=daL3R5UAeyH8FnEvHStvKvGVqOK3f35pW9G6wEXPouVL3NHusbWibfF5LYKnSnjg
+      - GITEA__security__INTERNAL_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYmYiOjE3MDg1MjQyMjZ9.aS2Kr-5GZ-ZhZnQSGWbBC1qK87jd7gEuOtzaIL5yXo8
+      - GITEA__server__LFS_START_SERVER=true
+      - GITEA__security__INSTALL_LOCK=true
+    restart: always
+    networks:
+      - gitea
+    volumes:
+      - gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8086:3000"
+      - "222:22"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=gitea
+      - POSTGRES_DB=gitea
+    networks:
+      - gitea
+    volumes:
+      - postgres:/var/lib/postgresql/data
