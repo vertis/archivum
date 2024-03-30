@@ -27,6 +27,22 @@ fn get_repositories(user_or_org: &str) -> Result<Vec<String>, Box<dyn std::error
     Ok(repos)
 }
 
+fn get_starred_repositories() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let output = cmd!(
+        "gh",
+        "api",
+        "/user/starred?per_page=100",
+        "-q",
+        ".[].full_name"
+    )
+    .read()?;
+    let repos = output
+        .lines()
+        .map(|line| line.to_string())
+        .collect::<Vec<String>>();
+    Ok(repos)
+}
+
 fn process_repository(repo: &str, output_dir: &str, user_or_org: &str) {
     let repo_path = format!("{}/{}.git", output_dir, repo);
     if Path::new(&repo_path).exists() {
@@ -280,6 +296,17 @@ fn main() {
                     ),
             )
             .subcommand(
+                command!("download-starred")
+                    .about("Downloads starred repositories for the logged in user")
+                    .arg(
+                        arg!(
+                            -b --basedir <BASE_OUTPUT_DIR> "Specifies the base output directory where starred repositories will be mirrored"
+                        )
+                        .required(true)
+                        .value_parser(value_parser!(PathBuf)),
+                    ),
+            )
+            .subcommand(
                 command!("upload")
                     .about("Uploads mirrored repositories to a specified destination")
                     .arg(
@@ -320,6 +347,28 @@ fn main() {
 
                 println!("Processing single repository: {}/{}", user_or_org, repo_name);
                 process_repository(repo_name, &output_dir, user_or_org);
+            },
+            Some(("download-starred", sub_matches)) => {
+                let base_output_dir = sub_matches.get_one::<PathBuf>("basedir").expect("required");
+
+                let starred_repos = get_starred_repositories().unwrap_or_else(|e| {
+                    eprintln!("Failed to list starred repositories: {}", e);
+                    std::process::exit(1);
+                });
+
+                println!("Starred repositories:");
+                for full_repo_name in &starred_repos {
+                    println!("{}", full_repo_name);
+                    let split: Vec<&str> = full_repo_name.split('/').collect();
+                    if split.len() == 2 {
+                        let user_or_org = split[0];
+                        let repo = split[1];
+                        let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
+                        process_repository(repo, &output_dir, user_or_org);
+                    } else {
+                        eprintln!("Invalid repository name format: {}", full_repo_name);
+                    }
+                }
             },
             Some(("upload", sub_matches)) => {
                 let destination = sub_matches.get_one::<String>("destination").expect("required");
