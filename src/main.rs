@@ -104,58 +104,7 @@ fn main() {
                 crate::commands::download_starred::execute(sub_matches);
             },
             Some(("upload", sub_matches)) => {
-                let destination = sub_matches.get_one::<String>("destination").expect("required");
-                let path = sub_matches.get_one::<PathBuf>("path").expect("required");
-                let token = "bf88e1f7759c52fdd08d3fc8e4105f1a0a689987"; // This should be securely retrieved or passed as an argument
-
-                // Glob pattern to match all git repositories in the specified path
-                let pattern = format!("{}/**/*.git", path.display());
-                let repos = glob::glob(&pattern).expect("Failed to read glob pattern");
-
-                for entry in repos {
-                    match entry {
-                        Ok(repo_path) => {
-                            let mut repo_name = repo_path.file_name().unwrap().to_str().unwrap();
-                            let org_name = repo_path.parent().unwrap().file_name().unwrap().to_str().unwrap();
-
-                            // Strip the .git from the end of repo_name if it exists
-                            if repo_name.ends_with(".git") {
-                                repo_name = &repo_name[..repo_name.len() - 4];
-                            }
-
-                            println!("Processing repository: {}", repo_name);
-
-                            // Check if the organization exists, create if not
-                            // if !check_org_exists(destination, token, org_name).await {
-                            //     if create_org(destination, token, org_name).await {
-                            //         println!("Organization {} created successfully.", org_name);
-                            //     } else {
-                            //         eprintln!("Failed to create organization {}.", org_name);
-                            //         continue;
-                            //     }
-                            // }
-                            create_org_if_no_conflict(destination, token, org_name).await;
-
-                            // Check if the repository exists within the organization, create if not
-                            if !check_repo_exists(destination, token, org_name, repo_name).await {
-                                if create_repo(destination, token, org_name, repo_name).await {
-                                    println!("Repository {}/{} created successfully.", org_name, repo_name);
-                                } else {
-                                    eprintln!("Failed to create repository {}/{}.", org_name, repo_name);
-                                    continue;
-                                }
-                            }
-
-                            // Mirror push the repository
-                            if let Err(e) = gitea::mirror_push_repo(&repo_path, destination, org_name, repo_name).await {
-                                eprintln!("Failed to mirror push repository {}/{}: {}", org_name, repo_name, e);
-                            } else {
-                                println!("Successfully mirrored repository {}/{} to destination.", org_name, repo_name);
-                            }
-                        },
-                        Err(e) => eprintln!("Error processing entry: {}", e),
-                    }
-                }
+                crate::commands::upload::execute(sub_matches).await;
             }
             _ => eprintln!("No valid subcommand was used."),
         }
