@@ -133,3 +133,17 @@ pub async fn create_org_if_no_conflict(
         Ok(create_org(api_url, token, org_name).await)
     }
 }
+
+pub async fn mirror_push_repo(
+    repo_path: &PathBuf,
+    api_url: &str,
+    org_name: &str,
+    repo_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let repo_url = format!("{}/{}/{}", api_url, org_name, repo_name);
+    let authenticated_repo_url = format!("http://vertis:4rch1v1st@{}", &repo_url[7..]);
+    let _output = cmd!("git", "push", "--mirror", &authenticated_repo_url)
+        .dir(repo_path)
+        .run()?;
+    Ok(())
+}
