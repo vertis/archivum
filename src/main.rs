@@ -1,90 +1,9 @@
-use duct::cmd;
-use serde_json::Value;
-use std::path::Path;
-
+mod commands;
 use clap::{arg, command, value_parser};
 use reqwest::Client;
 use std::path::PathBuf;
-
-fn process_repositories(repos: &[String], output_dir: &str, user_or_org: &str) {
-    for repo in repos {
-        println!("Processing repository: {}/{}", user_or_org, repo);
-        process_repository(repo, output_dir, user_or_org);
-    }
-}
-
-fn get_repositories(user_or_org: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let output = cmd!("gh", "repo", "list", user_or_org, "--json", "name").read()?;
-    let repos = serde_json::from_str::<Vec<Value>>(&output)?
-        .into_iter()
-        .map(|repo| {
-            repo["name"]
-                .as_str()
-                .expect("Expected a string")
-                .to_string()
-        })
-        .collect::<Vec<String>>();
-    Ok(repos)
-}
-
-fn get_starred_repositories() -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let output = cmd!(
-        "gh",
-        "api",
-        "/user/starred?per_page=100",
-        "-q",
-        ".[].full_name"
-    )
-    .read()?;
-    let repos = output
-        .lines()
-        .map(|line| line.to_string())
-        .collect::<Vec<String>>();
-    Ok(repos)
-}
-
-fn process_repository(repo: &str, output_dir: &str, user_or_org: &str) {
-    let repo_path = format!("{}/{}.git", output_dir, repo);
-    if Path::new(&repo_path).exists() {
-        update_repository(&repo_path, repo);
-    } else {
-        clone_repository(user_or_org, repo, &repo_path);
-    }
-}
-
-fn update_repository(repo_path: &str, repo: &str) {
-    if let Err(e) = cmd!("git", "--git-dir", repo_path, "fetch", "--all").run() {
-        eprintln!("Failed to fetch changes for repository {}: {}", repo, e);
-    }
-    // Handle LFS objects after fetching changes
-    if let Err(e) = cmd!("git", "lfs", "fetch", "--all", repo_path).run() {
-        eprintln!("Failed to fetch LFS objects for repository {}: {}", repo, e);
-    }
-}
-
-fn clone_repository(user_or_org: &str, repo: &str, repo_path: &str) {
-    if let Err(e) = cmd!(
-        "git",
-        "clone",
-        "--mirror",
-        &format!("https://github.com/{}/{}.git", user_or_org, repo),
-        repo_path
-    )
-    .run()
-    {
-        eprintln!("Failed to clone repository {}: {}", repo, e);
-    }
-    // Initialize and fetch LFS objects after cloning
-    if let Err(e) = cmd!("git", "lfs", "install").run() {
-        eprintln!(
-            "Failed to initialize Git LFS for repository {}: {}",
-            repo, e
-        );
-    }
-    if let Err(e) = cmd!("git", "lfs", "fetch", "--all", repo_path).run() {
-        eprintln!("Failed to fetch LFS objects for repository {}: {}", repo, e);
-    }
-}
+use duct::cmd;
+use crate::commands::{get_repositories, get_starred_repositories};
 
 async fn create_org(api_url: &str, token: &str, org_name: &str) -> bool {
     let client = Client::new();
@@ -190,11 +109,10 @@ async fn mirror_push_repo(
     api_url: &str,
     org_name: &str,
     repo_name: &str,
-    token: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let repo_url = format!("{}/{}/{}", api_url, org_name, repo_name);
     let authenticated_repo_url = format!("http://vertis:4rch1v1st@{}", &repo_url[7..]);
-    let output = cmd!("git", "push", "--mirror", &authenticated_repo_url)
+    let _output = cmd!("git", "push", "--mirror", &authenticated_repo_url)
         .dir(repo_path)
         .run()?;
     Ok(())
@@ -337,7 +255,7 @@ fn main() {
                     std::process::exit(1);
                 });
 
-                process_repositories(&repos, &output_dir, user_or_org);
+                commands::process_repositories(&repos, &output_dir, user_or_org);
             }
             Some(("download-repo", sub_matches)) => {
                 let user_or_org = sub_matches.get_one::<String>("user-org").expect("required");
@@ -346,7 +264,7 @@ fn main() {
                 let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
 
                 println!("Processing single repository: {}/{}", user_or_org, repo_name);
-                process_repository(repo_name, &output_dir, user_or_org);
+                commands::process_repositories(&[repo_name.to_string()], &output_dir, user_or_org);
             },
             Some(("download-starred", sub_matches)) => {
                 let base_output_dir = sub_matches.get_one::<PathBuf>("basedir").expect("required");
@@ -364,7 +282,7 @@ fn main() {
                         let user_or_org = split[0];
                         let repo = split[1];
                         let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
-                        process_repository(repo, &output_dir, user_or_org);
+                        commands::process_repositories(&[repo.to_string()], &output_dir, user_or_org);
                     } else {
                         eprintln!("Invalid repository name format: {}", full_repo_name);
                     }
@@ -414,7 +332,7 @@ fn main() {
                             }
 
                             // Mirror push the repository
-                            if let Err(e) = mirror_push_repo(&repo_path, destination, org_name, repo_name, token).await {
+                            if let Err(e) = mirror_push_repo(&repo_path, destination, org_name, repo_name).await {
                                 eprintln!("Failed to mirror push repository {}/{}: {}", org_name, repo_name, e);
                             } else {
                                 println!("Successfully mirrored repository {}/{} to destination.", org_name, repo_name);
