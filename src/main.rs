@@ -1,10 +1,10 @@
 mod actions;
+mod commands;
 mod gitea;
 mod github;
 use crate::gitea::{
     check_repo_exists, create_org_if_no_conflict, create_repo,
 };
-use crate::github::{get_repositories, get_starred_repositories};
 use clap::{arg, command, value_parser};
 use std::path::PathBuf;
 
@@ -95,47 +95,13 @@ fn main() {
 
         match matches.subcommand() {
             Some(("download", sub_matches)) => {
-                let user_or_org = sub_matches.get_one::<String>("user-org").expect("required");
-                let base_output_dir = sub_matches.get_one::<PathBuf>("basedir").expect("required");
-                let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
-
-                let repos = get_repositories(user_or_org).unwrap_or_else(|e| {
-                    eprintln!("Failed to list repositories: {}", e);
-                    std::process::exit(1);
-                });
-
-                actions::process_repositories(&repos, &output_dir, user_or_org);
+                crate::commands::download::execute(sub_matches);
             }
             Some(("download-repo", sub_matches)) => {
-                let user_or_org = sub_matches.get_one::<String>("user-org").expect("required");
-                let repo_name = sub_matches.get_one::<String>("repo").expect("required");
-                let base_output_dir = sub_matches.get_one::<PathBuf>("basedir").expect("required");
-                let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
-
-                println!("Processing single repository: {}/{}", user_or_org, repo_name);
-                actions::process_repositories(&[repo_name.to_string()], &output_dir, user_or_org);
+                crate::commands::download_repo::execute(sub_matches);
             },
             Some(("download-starred", sub_matches)) => {
-                let base_output_dir = sub_matches.get_one::<PathBuf>("basedir").expect("required");
-
-                let starred_repos = get_starred_repositories().unwrap_or_else(|e| {
-                    eprintln!("Failed to list starred repositories: {}", e);
-                    std::process::exit(1);
-                });
-
-                println!("Starred repositories:");
-                for full_repo_name in &starred_repos {
-                    println!("{}", full_repo_name);
-                    let split: Vec<&str> = full_repo_name.split('/').collect();
-                    if split.len() == 2 {
-                        let user_or_org = split[0];
-                        let repo = split[1];
-                        let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
-                        actions::process_repositories(&[repo.to_string()], &output_dir, user_or_org);
-                    } else {
-                        eprintln!("Invalid repository name format: {}", full_repo_name);
-                    }
-                }
+                crate::commands::download_starred::execute(sub_matches);
             },
             Some(("upload", sub_matches)) => {
                 let destination = sub_matches.get_one::<String>("destination").expect("required");
