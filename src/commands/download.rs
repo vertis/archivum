@@ -8,10 +8,13 @@ pub fn execute(sub_matches: &ArgMatches) {
     let base_output_dir = sub_matches.get_one::<PathBuf>("basedir").expect("required");
     let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
 
-    let repos = get_repositories(user_or_org).unwrap_or_else(|e| {
-        eprintln!("Failed to list repositories: {}", e);
-        std::process::exit(1);
-    });
+    let repos = match get_repositories(user_or_org) {
+        Ok(repos) => repos,
+        Err(e) => {
+            eprintln!("Failed to list repositories: {}", e);
+            std::process::exit(1);
+        }
+    };
 
-    actions::process_repositories(&repos, &output_dir, user_or_org);
+    actions::process_repositories(&repos, &output_dir, user_or_org, None);
 }

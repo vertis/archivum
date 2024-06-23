@@ -19,7 +19,7 @@ pub fn execute(sub_matches: &ArgMatches) {
             let user_or_org = split[0];
             let repo = split[1];
             let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
-            actions::process_repositories(&[repo.to_string()], &output_dir, user_or_org);
+            actions::process_repositories(&[repo.to_string()], &output_dir, user_or_org, None);
         } else {
             eprintln!("Invalid repository name format: {}", full_repo_name);
         }

@@ -1,0 +1,18 @@
+# List of GitHub users to mirror
+users = ["user1", "user2"]
+
+# List of GitHub organizations to mirror
+organizations = ["org1", "org2"]
+
+# List of specific repositories to mirror (in the format "owner/repo")
+repositories = ["owner1/repo1", "owner2/repo2"]
+
+# Output directory for mirrored repositories
+output_dir = "/path/to/output/directory"
+
+# Gitea configuration (optional)
+[gitea]
+url = "https://gitea.example.com"
+token = "your_gitea_api_token"
+username = "your_gitea_username"
+password = "your_gitea_password"

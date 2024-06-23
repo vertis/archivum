@@ -1,112 +1,71 @@
 mod actions;
 mod commands;
+mod config;
 mod gitea;
 mod github;
-use crate::gitea::{
-    check_repo_exists, create_org_if_no_conflict, create_repo,
-};
-use clap::{arg, command, value_parser};
-use std::path::PathBuf;
+use clap::{Arg, Command, ArgMatches};
 
 fn main() {
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap();
+    let matches = Command::new("archivum")
+        .version("0.1.0")
+        .author("Your Name <your.email@example.com>")
+        .about("Mirrors GitHub repositories for a specified user or organization")
+        .subcommand(
+            Command::new("mirror")
+                .about("Mirrors repositories based on the configuration file")
+                .arg(
+                    Arg::new("config")
+                        .short('c')
+                        .long("config")
+                        .value_name("CONFIG_FILE")
+                        .help("Specifies the path to the configuration file")
+                        .default_value("config.toml"),
+                ),
+        )
+        .subcommand(
+            Command::new("mirror-starred")
+                .about("Mirrors starred repositories based on the configuration file")
+                .arg(
+                    Arg::new("config")
+                        .short('c')
+                        .long("config")
+                        .value_name("CONFIG_FILE")
+                        .help("Specifies the path to the configuration file")
+                        .default_value("config.toml"),
+                ),
+        )
+        .get_matches();
 
-    rt.block_on(async {
-        let matches = command!("archivum")
-            .version("0.1.0")
-            .author("Your Name <your.email@example.com>")
-            .about("Mirrors GitHub repositories for a specified user or organization")
-            .subcommand(
-                command!("download")
-                    .about("Downloads repositories for the specified user or organization")
-                    .arg(
-                        arg!(
-                            -u --"user-org" <USER_OR_ORG> "Specifies the GitHub user or organization"
-                        )
-                        .required(true)
-                        .value_parser(value_parser!(String)),
-                    )
-                    .arg(
-                        arg!(
-                            -b --basedir <BASE_OUTPUT_DIR> "Specifies the base output directory where repositories will be mirrored"
-                        )
-                        .required(true)
-                        .value_parser(value_parser!(PathBuf)),
-                    ),
-            )
-            .subcommand(
-                command!("download-repo")
-                    .about("Downloads a specific repository for the specified user or organization")
-                    .arg(
-                        arg!(
-                            -u --"user-org" <USER_ORG> "Specifies the GitHub user or organization"
-                        )
-                        .required(true)
-                        .value_parser(value_parser!(String)),
-                    )
-                    .arg(
-                        arg!(
-                            -r --repo <REPO_NAME> "Specifies the name of the repository to download"
-                        )
-                        .required(true)
-                        .value_parser(value_parser!(String)),
-                    )
-                    .arg(
-                        arg!(
-                            -b --basedir <BASE_OUTPUT_DIR> "Specifies the base output directory where the repository will be mirrored"
-                        )
-                        .required(true)
-                        .value_parser(value_parser!(PathBuf)),
-                    ),
-            )
-            .subcommand(
-                command!("download-starred")
-                    .about("Downloads starred repositories for the logged in user")
-                    .arg(
-                        arg!(
-                            -b --basedir <BASE_OUTPUT_DIR> "Specifies the base output directory where starred repositories will be mirrored"
-                        )
-                        .required(true)
-                        .value_parser(value_parser!(PathBuf)),
-                    ),
-            )
-            .subcommand(
-                command!("upload")
-                    .about("Uploads mirrored repositories to a specified destination")
-                    .arg(
-                        arg!(
-                            -d --destination <DESTINATION> "Specifies the destination for uploading repositories"
-                        )
-                        .required(true)
-                        .value_parser(value_parser!(String)),
-                    )
-                    .arg(
-                        arg!(
-                            -p --path <PATH> "Specifies the path of the mirrored repositories to upload"
-                        )
-                        .required(true)
-                        .value_parser(value_parser!(PathBuf)),
-                    ),
-            )
-            .get_matches();
-
-        match matches.subcommand() {
-            Some(("download", sub_matches)) => {
-                crate::commands::download::execute(sub_matches);
-            }
-            Some(("download-repo", sub_matches)) => {
-                crate::commands::download_repo::execute(sub_matches);
-            },
-            Some(("download-starred", sub_matches)) => {
-                crate::commands::download_starred::execute(sub_matches);
-            },
-            Some(("upload", sub_matches)) => {
-                crate::commands::upload::execute(sub_matches).await;
-            }
-            _ => eprintln!("No valid subcommand was used."),
+    match matches.subcommand() {
+        Some(("mirror", sub_matches)) => {
+            execute_command(sub_matches, commands::mirror::execute)
         }
-    });
+        Some(("mirror-starred", sub_matches)) => {
+            execute_command(sub_matches, commands::mirror_starred::execute)
+        }
+        _ => {
+            eprintln!("No valid subcommand was used. Use 'archivum mirror' or 'archivum mirror-starred' to run the commands.");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn execute_command<F>(sub_matches: &ArgMatches, command: F)
+where
+    F: Fn(&config::Config) -> Result<(), Box<dyn std::error::Error>>,
+{
+    let config_path = sub_matches.get_one::<String>("config").expect("required");
+    match config::Config::from_file(config_path) {
+        Ok(config) => {
+            if let Err(e) = command(&config) {
+                eprintln!("Error executing command: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Err(e) => {
+            eprintln!("Error reading configuration file: {}", e);
+            eprintln!("Make sure the file '{}' exists and is properly formatted.", config_path);
+            std::process::exit(1);
+        }
+    }
 }

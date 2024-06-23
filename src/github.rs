@@ -1,4 +1,5 @@
 use duct::cmd;
+use std::process::Command;
 use serde_json::Value;
 
 pub fn get_starred_repositories() -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -18,15 +19,24 @@ pub fn get_starred_repositories() -> Result<Vec<String>, Box<dyn std::error::Err
 }
 
 pub fn get_repositories(user_or_org: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let output = cmd!("gh", "repo", "list", user_or_org, "--json", "name").read()?;
-    let repos = serde_json::from_str::<Vec<Value>>(&output)?
-        .into_iter()
-        .map(|repo| {
-            repo["name"]
-                .as_str()
-                .expect("Expected a string")
-                .to_string()
-        })
-        .collect::<Vec<String>>();
-    Ok(repos)
+    let output = Command::new("gh")
+        .args(&["api", &format!("users/{}/repos", user_or_org), "--paginate"])
+        .output()?;
+
+    if !output.status.success() {
+        return Err(format!("GitHub CLI command failed: {}", String::from_utf8_lossy(&output.stderr)).into());
+    }
+
+    let stdout = String::from_utf8(output.stdout)?;
+    let repos: Value = serde_json::from_str(&stdout)?;
+
+    if let Value::Array(repos) = repos {
+        let repos = repos
+            .into_iter()
+            .filter_map(|repo| repo["name"].as_str().map(|s| s.to_string()))
+            .collect();
+        Ok(repos)
+    } else {
+        Err("Unexpected response format from GitHub API".into())
+    }
 }
