@@ -1,10 +1,12 @@
-mod commands;
+mod actions;
 mod gitea;
+mod github;
+use crate::gitea::{
+    check_repo_exists, create_org_if_no_conflict, create_repo,
+};
+use crate::github::{get_repositories, get_starred_repositories};
 use clap::{arg, command, value_parser};
 use std::path::PathBuf;
-use crate::commands::{get_repositories, get_starred_repositories};
-use crate::gitea::{create_org, create_org_if_no_conflict, check_org_exists, check_repo_exists, create_repo, mirror_push_repo};
-use reqwest::Client;
 
 fn main() {
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -13,7 +15,7 @@ fn main() {
         .unwrap();
 
     rt.block_on(async {
-        let matches = command!("live-mirror")
+        let matches = command!("archivum")
             .version("0.1.0")
             .author("Your Name <your.email@example.com>")
             .about("Mirrors GitHub repositories for a specified user or organization")
@@ -102,7 +104,7 @@ fn main() {
                     std::process::exit(1);
                 });
 
-                commands::process_repositories(&repos, &output_dir, user_or_org);
+                actions::process_repositories(&repos, &output_dir, user_or_org);
             }
             Some(("download-repo", sub_matches)) => {
                 let user_or_org = sub_matches.get_one::<String>("user-org").expect("required");
@@ -111,7 +113,7 @@ fn main() {
                 let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
 
                 println!("Processing single repository: {}/{}", user_or_org, repo_name);
-                commands::process_repositories(&[repo_name.to_string()], &output_dir, user_or_org);
+                actions::process_repositories(&[repo_name.to_string()], &output_dir, user_or_org);
             },
             Some(("download-starred", sub_matches)) => {
                 let base_output_dir = sub_matches.get_one::<PathBuf>("basedir").expect("required");
@@ -129,7 +131,7 @@ fn main() {
                         let user_or_org = split[0];
                         let repo = split[1];
                         let output_dir = format!("{}/{}", base_output_dir.display(), user_or_org);
-                        commands::process_repositories(&[repo.to_string()], &output_dir, user_or_org);
+                        actions::process_repositories(&[repo.to_string()], &output_dir, user_or_org);
                     } else {
                         eprintln!("Invalid repository name format: {}", full_repo_name);
                     }
