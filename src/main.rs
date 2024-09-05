@@ -3,7 +3,7 @@ mod commands;
 mod config;
 mod gitea;
 mod github;
-use clap::{Arg, Command, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 
 fn main() {
     let matches = Command::new("archivum")
@@ -34,17 +34,30 @@ fn main() {
                         .default_value("config.toml"),
                 ),
         )
+        .subcommand(
+            Command::new("download")
+                .about("Downloads repositories based on the configuration file")
+                .arg(
+                    Arg::new("config")
+                        .short('c')
+                        .long("config")
+                        .value_name("CONFIG_FILE")
+                        .help("Specifies the path to the configuration file")
+                        .default_value("config.toml"),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
-        Some(("mirror", sub_matches)) => {
-            execute_command(sub_matches, commands::mirror::execute)
-        }
+        Some(("mirror", sub_matches)) => execute_command(sub_matches, commands::mirror::execute),
         Some(("mirror-starred", sub_matches)) => {
             execute_command(sub_matches, commands::mirror_starred::execute)
         }
+        Some(("download", sub_matches)) => {
+            execute_command(sub_matches, commands::download::execute)
+        }
         _ => {
-            eprintln!("No valid subcommand was used. Use 'archivum mirror' or 'archivum mirror-starred' to run the commands.");
+            eprintln!("No valid subcommand was used. Use 'archivum mirror', 'archivum mirror-starred', or 'archivum download' to run the commands.");
             std::process::exit(1);
         }
     }
@@ -64,7 +77,10 @@ where
         }
         Err(e) => {
             eprintln!("Error reading configuration file: {}", e);
-            eprintln!("Make sure the file '{}' exists and is properly formatted.", config_path);
+            eprintln!(
+                "Make sure the file '{}' exists and is properly formatted.",
+                config_path
+            );
             std::process::exit(1);
         }
     }
