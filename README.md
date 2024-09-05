@@ -76,6 +76,14 @@ To download repositories based on the configuration file:
 cargo run -- download [-c <CONFIG_FILE>]
 ```
 
+### Upload Repositories
+
+To upload repositories based on the configuration file:
+
+```bash
+cargo run -- upload [-c <CONFIG_FILE>]
+```
+
 ### Configuration File
 
 The configuration file (default: `config.toml`) should contain the necessary settings for the GitHub source and the destination (e.g., Gitea). Make sure to set up this file correctly before running any commands.
