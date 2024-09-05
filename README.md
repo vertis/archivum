@@ -42,28 +42,65 @@ cargo build --release
 
 ## Usage
 
-### Download Repositories
+Archivum supports three main commands: `mirror`, `mirror-starred`, and `download`. Each command can be run with an optional configuration file. If no configuration file is specified, it will use the default `config.toml` in the current directory.
 
-To download all repositories for a user or organization:
+### Mirror Repositories
+
+To mirror repositories based on the configuration file:
 
 ```bash
-cargo run -- download -u <USER_OR_ORG> -b <BASE_OUTPUT_DIR>
+cargo run -- mirror [-c <CONFIG_FILE>]
+```
+
+### Mirror Starred Repositories
+
+To mirror starred repositories based on the configuration file:
+
+```bash
+cargo run -- mirror-starred [-c <CONFIG_FILE>]
 ```
 
 ### Download Starred Repositories
 
-To download all starred repositories:
+To download starred repositories based on the configuration file:
 
 ```bash
-cargo run -- download-starred -b <BASE_OUTPUT_DIR>
+cargo run -- download-starred [-c <CONFIG_FILE>]
 ```
 
-### Upload Repositories
+### Download Repositories
 
-To upload all repositories from a local directory to a destination:
+To download repositories based on the configuration file:
 
 ```bash
-cargo run -- upload -d <DESTINATION> -p <PATH>
+cargo run -- download [-c <CONFIG_FILE>]
+```
+
+### Configuration File
+
+The configuration file (default: `config.toml`) should contain the necessary settings for the GitHub source and the destination (e.g., Gitea). Make sure to set up this file correctly before running any commands.
+
+Example `config.toml`:
+
+```toml
+# List of GitHub users to mirror
+users = ["user1", "user2"]
+
+# List of GitHub organizations to mirror
+organizations = ["org1", "org2"]
+
+# List of specific repositories to mirror (in the format "owner/repo")
+repositories = ["owner1/repo1", "owner2/repo2"]
+
+# Output directory for mirrored repositories
+output_dir = "/path/to/output/directory"
+
+# Gitea configuration (optional)
+[gitea]
+url = "https://gitea.example.com"
+token = "your_gitea_api_token"
+username = "your_gitea_username"
+password = "your_gitea_password"
 ```
 
 ## Configuration
