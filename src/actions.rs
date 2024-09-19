@@ -1,9 +1,15 @@
-use duct::cmd;
-use std::path::Path;
 use crate::config::GiteaConfig;
 use crate::gitea;
+use duct::cmd;
+use std::path::Path;
 
-pub fn process_repositories(repos: &[String], output_dir: &str, user_or_org: &str, gitea_config: Option<&GiteaConfig>) -> Result<(), Box<dyn std::error::Error>> {
+/// Process a list of repositories by cloning or updating them from GitHub and pushing to Gitea.
+pub fn process_repositories(
+    repos: &[String],
+    output_dir: &str,
+    user_or_org: &str,
+    gitea_config: Option<&GiteaConfig>,
+) -> Result<(), Box<dyn std::error::Error>> {
     for repo in repos {
         println!("Processing repository: {}/{}", user_or_org, repo);
         process_repository(repo, output_dir, user_or_org, gitea_config)?;
@@ -11,7 +17,13 @@ pub fn process_repositories(repos: &[String], output_dir: &str, user_or_org: &st
     Ok(())
 }
 
-fn process_repository(repo: &str, output_dir: &str, user_or_org: &str, gitea_config: Option<&GiteaConfig>) -> Result<(), Box<dyn std::error::Error>> {
+/// Process a single repository by cloning or updating it from GitHub and pushing to Gitea.
+fn process_repository(
+    repo: &str,
+    output_dir: &str,
+    user_or_org: &str,
+    gitea_config: Option<&GiteaConfig>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let repo_path = format!("{}/{}.git", output_dir, repo);
     let repo_dir = Path::new(&repo_path);
 
@@ -29,16 +41,25 @@ fn process_repository(repo: &str, output_dir: &str, user_or_org: &str, gitea_con
     Ok(())
 }
 
-fn ensure_gitea_repo_exists(config: &GiteaConfig, user_or_org: &str, repo: &str) -> Result<(), Box<dyn std::error::Error>> {
+/// Ensure that a repository exists in Gitea by creating the organization and repository if they don't exist.
+fn ensure_gitea_repo_exists(
+    config: &GiteaConfig,
+    user_or_org: &str,
+    repo: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     // First, ensure the organization exists
     match gitea::create_org_if_no_conflict(&config.url, &config.token, user_or_org) {
         Ok(created) => {
             if created {
                 println!("Created new organization in Gitea: {}", user_or_org);
             }
-        },
+        }
         Err(e) => {
-            return Err(format!("Failed to create organization in Gitea: {}: {}", user_or_org, e).into());
+            return Err(format!(
+                "Failed to create organization in Gitea: {}: {}",
+                user_or_org, e
+            )
+            .into());
         }
     }
 
@@ -47,13 +68,22 @@ fn ensure_gitea_repo_exists(config: &GiteaConfig, user_or_org: &str, repo: &str)
         if gitea::create_repo(&config.url, &config.token, user_or_org, repo) {
             println!("Created new repository in Gitea: {}/{}", user_or_org, repo);
         } else {
-            return Err(format!("Failed to create repository in Gitea: {}/{}", user_or_org, repo).into());
+            return Err(format!(
+                "Failed to create repository in Gitea: {}/{}",
+                user_or_org, repo
+            )
+            .into());
         }
     }
     Ok(())
 }
 
-fn clone_from_github(user_or_org: &str, repo: &str, repo_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+/// Clone a repository from GitHub into the specified output directory.
+fn clone_from_github(
+    user_or_org: &str,
+    repo: &str,
+    repo_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     cmd!(
         "git",
         "clone",
@@ -70,23 +100,39 @@ fn clone_from_github(user_or_org: &str, repo: &str, repo_path: &str) -> Result<(
     Ok(())
 }
 
+/// Update a repository by fetching the latest changes.
 fn update_repository(repo_path: &str, _repo: &str) -> Result<(), Box<dyn std::error::Error>> {
     cmd!("git", "--git-dir", repo_path, "fetch", "--all").run()?;
-    
+
     // Handle LFS objects after fetching changes
     cmd!("git", "lfs", "fetch", "--all", repo_path).run()?;
 
     Ok(())
 }
 
-pub fn push_to_gitea(config: &GiteaConfig, repo_path: &str, org_name: &str, repo_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let authenticated_url = format!("http://{}:{}@{}/{}/{}.git", 
-        config.username, 
-        config.password, 
+/// Push a repository to Gitea using the provided configuration.
+pub fn push_to_gitea(
+    config: &GiteaConfig,
+    repo_path: &str,
+    org_name: &str,
+    repo_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let authenticated_url = format!(
+        "http://{}:{}@{}/{}/{}.git",
+        config.username,
+        config.password,
         config.url.trim_start_matches("http://"),
-        org_name, 
+        org_name,
         repo_name
     );
-    cmd!("git", "--git-dir", repo_path, "push", "--mirror", authenticated_url).run()?;
+    cmd!(
+        "git",
+        "--git-dir",
+        repo_path,
+        "push",
+        "--mirror",
+        authenticated_url
+    )
+    .run()?;
     Ok(())
 }
