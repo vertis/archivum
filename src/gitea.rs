@@ -1,3 +1,4 @@
+use crate::config::GiteaConfig;
 use reqwest::blocking::Client;
 
 pub fn create_org(url: &str, token: &str, org_name: &str) -> bool {
@@ -59,11 +60,15 @@ pub fn check_user_or_org_exists(url: &str, token: &str, name: &str) -> bool {
         .bearer_auth(token)
         .send();
 
-    user_res.is_ok() && user_res.unwrap().status().is_success() ||
-    org_res.is_ok() && org_res.unwrap().status().is_success()
+    user_res.is_ok() && user_res.unwrap().status().is_success()
+        || org_res.is_ok() && org_res.unwrap().status().is_success()
 }
 
-pub fn create_org_if_no_conflict(url: &str, token: &str, org_name: &str) -> Result<bool, Box<dyn std::error::Error>> {
+pub fn create_org_if_no_conflict(
+    url: &str,
+    token: &str,
+    org_name: &str,
+) -> Result<bool, Box<dyn std::error::Error>> {
     if check_user_or_org_exists(url, token, org_name) {
         Ok(false) // Organization already exists
     } else {
@@ -71,3 +76,66 @@ pub fn create_org_if_no_conflict(url: &str, token: &str, org_name: &str) -> Resu
     }
 }
 
+/// Ensure that a repository exists in Gitea by creating the organization and repository if they don't exist.
+pub fn ensure_repo_exists(
+    config: &GiteaConfig,
+    user_or_org: &str,
+    repo: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // First, ensure the organization exists
+    match gitea::create_org_if_no_conflict(&config.url, &config.token, user_or_org) {
+        Ok(created) => {
+            if created {
+                println!("Created new organization in Gitea: {}", user_or_org);
+            }
+        }
+        Err(e) => {
+            return Err(format!(
+                "Failed to create organization in Gitea: {}: {}",
+                user_or_org, e
+            )
+            .into());
+        }
+    }
+
+    // Then, check if the repository exists and create it if it doesn't
+    if !gitea::check_repo_exists(&config.url, &config.token, user_or_org, repo) {
+        if gitea::create_repo(&config.url, &config.token, user_or_org, repo) {
+            println!("Created new repository in Gitea: {}/{}", user_or_org, repo);
+        } else {
+            return Err(format!(
+                "Failed to create repository in Gitea: {}/{}",
+                user_or_org, repo
+            )
+            .into());
+        }
+    }
+    Ok(())
+}
+
+/// Push a repository to Gitea using the provided configuration.
+pub fn push(
+    config: &GiteaConfig,
+    repo_path: &str,
+    org_name: &str,
+    repo_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let authenticated_url = format!(
+        "http://{}:{}@{}/{}/{}.git",
+        config.username,
+        config.password,
+        config.url.trim_start_matches("http://"),
+        org_name,
+        repo_name
+    );
+    cmd!(
+        "git",
+        "--git-dir",
+        repo_path,
+        "push",
+        "--mirror",
+        authenticated_url
+    )
+    .run()?;
+    Ok(())
+}

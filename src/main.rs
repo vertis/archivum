@@ -1,8 +1,10 @@
 mod actions;
 mod commands;
 mod config;
+mod git;
 mod gitea;
 mod github;
+
 use clap::{Arg, ArgMatches, Command};
 
 fn main() {

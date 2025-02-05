@@ -1,6 +1,6 @@
 use duct::cmd;
-use std::process::Command;
 use serde_json::Value;
+use std::process::Command;
 
 pub fn get_starred_repositories() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let output = cmd!(
@@ -24,7 +24,11 @@ pub fn get_repositories(user_or_org: &str) -> Result<Vec<String>, Box<dyn std::e
         .output()?;
 
     if !output.status.success() {
-        return Err(format!("GitHub CLI command failed: {}", String::from_utf8_lossy(&output.stderr)).into());
+        return Err(format!(
+            "GitHub CLI command failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )
+        .into());
     }
 
     let stdout = String::from_utf8(output.stdout)?;
@@ -39,4 +43,26 @@ pub fn get_repositories(user_or_org: &str) -> Result<Vec<String>, Box<dyn std::e
     } else {
         Err("Unexpected response format from GitHub API".into())
     }
+}
+
+// clone with --mirror and lfs, we should probably make this more generic at some point
+pub fn clone_with_mirror(
+    user_or_org: &str,
+    repo: &str,
+    repo_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    cmd!(
+        "git",
+        "clone",
+        "--mirror",
+        &format!("https://github.com/{}/{}.git", user_or_org, repo),
+        repo_path
+    )
+    .run()?;
+
+    // Initialize and fetch LFS objects after cloning
+    cmd!("git", "lfs", "install").run()?;
+    cmd!("git", "lfs", "fetch", "--all", repo_path).run()?;
+
+    Ok(())
 }
