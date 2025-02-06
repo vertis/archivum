@@ -1,4 +1,5 @@
 use crate::config::GiteaConfig;
+use duct::cmd;
 use reqwest::blocking::Client;
 
 pub fn create_org(url: &str, token: &str, org_name: &str) -> bool {
@@ -83,7 +84,7 @@ pub fn ensure_repo_exists(
     repo: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // First, ensure the organization exists
-    match gitea::create_org_if_no_conflict(&config.url, &config.token, user_or_org) {
+    match create_org_if_no_conflict(&config.url, &config.token, user_or_org) {
         Ok(created) => {
             if created {
                 println!("Created new organization in Gitea: {}", user_or_org);
@@ -99,8 +100,8 @@ pub fn ensure_repo_exists(
     }
 
     // Then, check if the repository exists and create it if it doesn't
-    if !gitea::check_repo_exists(&config.url, &config.token, user_or_org, repo) {
-        if gitea::create_repo(&config.url, &config.token, user_or_org, repo) {
+    if !check_repo_exists(&config.url, &config.token, user_or_org, repo) {
+        if create_repo(&config.url, &config.token, user_or_org, repo) {
             println!("Created new repository in Gitea: {}/{}", user_or_org, repo);
         } else {
             return Err(format!(

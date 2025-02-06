@@ -1,3 +1,5 @@
+use duct::cmd;
+
 // Update a repository by fetching the latest changes.
 pub fn update_repo_with_lfs(
     repo_path: &str,

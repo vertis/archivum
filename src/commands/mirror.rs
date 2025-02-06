@@ -1,8 +1,8 @@
-use crate::config::{Config, GiteaConfig};
 use crate::actions;
+use crate::config::{Config, GiteaConfig};
+use crate::gitea::{check_repo_exists, create_org_if_no_conflict, create_repo, push};
 use crate::github::get_repositories;
 use std::path::Path;
-use crate::gitea::{create_org_if_no_conflict, check_repo_exists, create_repo};
 
 pub fn execute(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
     let output_dir = Path::new(&config.output_dir);
@@ -31,7 +31,12 @@ fn process_user_or_org(
     gitea_config: Option<&GiteaConfig>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let repos = get_repositories(user_or_org)?;
-    actions::process_repositories(&repos, &output_dir.join(user_or_org).to_string_lossy(), user_or_org, gitea_config)?;
+    actions::process_repositories(
+        &repos,
+        &output_dir.join(user_or_org).to_string_lossy(),
+        user_or_org,
+        gitea_config,
+    )?;
     Ok(())
 }
 
@@ -44,7 +49,12 @@ fn process_individual_repo(
     if split.len() == 2 {
         let user_or_org = split[0];
         let repo = split[1];
-        actions::process_repositories(&[repo.to_string()], &output_dir.join(user_or_org).to_string_lossy(), user_or_org, gitea_config)?;
+        actions::process_repositories(
+            &[repo.to_string()],
+            &output_dir.join(user_or_org).to_string_lossy(),
+            user_or_org,
+            gitea_config,
+        )?;
     } else {
         eprintln!("Invalid repository name format: {}", full_repo_name);
     }
@@ -65,9 +75,12 @@ fn process_gitea_tasks(
                 } else {
                     println!("Organization {} already exists in Gitea.", user_or_org);
                 }
-            },
+            }
             Err(e) => {
-                eprintln!("Error while checking/creating organization {}: {}", user_or_org, e);
+                eprintln!(
+                    "Error while checking/creating organization {}: {}",
+                    user_or_org, e
+                );
                 // Continue processing even if there's an error with organization creation
             }
         }
@@ -100,16 +113,31 @@ fn process_gitea_repo(
     // Ensure the repository exists within the organization, create if not
     if !check_repo_exists(&gitea_config.url, &gitea_config.token, user_or_org, repo) {
         if create_repo(&gitea_config.url, &gitea_config.token, user_or_org, repo) {
-            println!("Repository {}/{} created successfully in Gitea.", user_or_org, repo);
+            println!(
+                "Repository {}/{} created successfully in Gitea.",
+                user_or_org, repo
+            );
         } else {
-            return Err(format!("Failed to create repository {}/{} in Gitea.", user_or_org, repo).into());
+            return Err(format!(
+                "Failed to create repository {}/{} in Gitea.",
+                user_or_org, repo
+            )
+            .into());
         }
     }
 
     // Push the repository to Gitea
     let repo_path = output_dir.join(user_or_org).join(format!("{}.git", repo));
-    actions::push_to_gitea(gitea_config, &repo_path.to_string_lossy(), user_or_org, repo)?;
-    println!("Successfully pushed repository {}/{} to Gitea.", user_or_org, repo);
+    push(
+        gitea_config,
+        &repo_path.to_string_lossy(),
+        user_or_org,
+        repo,
+    )?;
+    println!(
+        "Successfully pushed repository {}/{} to Gitea.",
+        user_or_org, repo
+    );
 
     Ok(())
 }

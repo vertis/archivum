@@ -1,5 +1,5 @@
 use crate::config::{Config, GiteaConfig};
-use crate::gitea::{check_repo_exists, create_org_if_no_conflict, create_repo};
+use crate::gitea::{check_repo_exists, create_org_if_no_conflict, create_repo, push};
 use glob::glob;
 use std::path::Path;
 
@@ -72,7 +72,7 @@ fn process_gitea_tasks(
         }
 
         // Push the repository to Gitea
-        match crate::actions::push_to_gitea(
+        match push(
             gitea_config,
             &repo_path.to_string_lossy(),
             org_name,
