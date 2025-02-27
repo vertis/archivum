@@ -22,6 +22,12 @@ fn main() {
                         .value_name("CONFIG_FILE")
                         .help("Specifies the path to the configuration file")
                         .default_value("config.toml"),
+                )
+                .arg(
+                    Arg::new("new-only")
+                        .long("new-only")
+                        .help("Only download repositories that don't exist locally")
+                        .action(clap::ArgAction::SetTrue),
                 ),
         )
         .subcommand(
@@ -34,6 +40,12 @@ fn main() {
                         .value_name("CONFIG_FILE")
                         .help("Specifies the path to the configuration file")
                         .default_value("config.toml"),
+                )
+                .arg(
+                    Arg::new("new-only")
+                        .long("new-only")
+                        .help("Only download repositories that don't exist locally")
+                        .action(clap::ArgAction::SetTrue),
                 ),
         )
         .subcommand(
@@ -46,6 +58,12 @@ fn main() {
                         .value_name("CONFIG_FILE")
                         .help("Specifies the path to the configuration file")
                         .default_value("config.toml"),
+                )
+                .arg(
+                    Arg::new("new-only")
+                        .long("new-only")
+                        .help("Only download repositories that don't exist locally")
+                        .action(clap::ArgAction::SetTrue),
                 ),
         )
         .subcommand(
@@ -58,6 +76,12 @@ fn main() {
                         .value_name("CONFIG_FILE")
                         .help("Specifies the path to the configuration file")
                         .default_value("config.toml"),
+                )
+                .arg(
+                    Arg::new("new-only")
+                        .long("new-only")
+                        .help("Only download repositories that don't exist locally")
+                        .action(clap::ArgAction::SetTrue),
                 ),
         )
         .subcommand(
@@ -95,12 +119,12 @@ fn main() {
 
 fn execute_command<F>(sub_matches: &ArgMatches, command: F)
 where
-    F: Fn(&config::Config) -> Result<(), Box<dyn std::error::Error>>,
+    F: Fn(&clap::ArgMatches, &config::Config) -> Result<(), Box<dyn std::error::Error>>,
 {
     let config_path = sub_matches.get_one::<String>("config").expect("required");
     match config::Config::from_file(config_path) {
         Ok(config) => {
-            if let Err(e) = command(&config) {
+            if let Err(e) = command(sub_matches, &config) {
                 eprintln!("Error executing command: {}", e);
                 std::process::exit(1);
             }

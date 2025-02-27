@@ -6,6 +6,7 @@ use std::path::Path;
 fn process_starred_repo(
     full_repo_name: &str,
     output_dir: &Path,
+    new_only: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let split: Vec<&str> = full_repo_name.split('/').collect();
     if split.len() == 2 {
@@ -16,6 +17,7 @@ fn process_starred_repo(
             &output_dir.join(user_or_org).to_string_lossy(),
             user_or_org,
             None,
+            new_only,
         )?;
     } else {
         eprintln!("Invalid repository name format: {}", full_repo_name);
@@ -23,15 +25,19 @@ fn process_starred_repo(
     Ok(())
 }
 
-pub fn execute(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+pub fn execute(
+    matches: &clap::ArgMatches,
+    config: &Config,
+) -> Result<(), Box<dyn std::error::Error>> {
     let output_dir = Path::new(&config.output_dir);
+    let new_only = matches.get_flag("new-only");
 
     let starred_repos = get_starred_repositories()?;
 
     println!("Processing starred repositories:");
     for full_repo_name in &starred_repos {
         println!("{}", full_repo_name);
-        process_starred_repo(full_repo_name, output_dir)?;
+        process_starred_repo(full_repo_name, output_dir, new_only)?;
     }
 
     Ok(())

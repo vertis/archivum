@@ -3,7 +3,10 @@ use crate::gitea::{check_repo_exists, create_org_if_no_conflict, create_repo, pu
 use glob::glob;
 use std::path::Path;
 
-pub fn execute(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+pub fn execute(
+    matches: &clap::ArgMatches,
+    config: &Config,
+) -> Result<(), Box<dyn std::error::Error>> {
     let output_dir = Path::new(&config.output_dir);
 
     if let Some(gitea_config) = &config.gitea {

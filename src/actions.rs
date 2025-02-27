@@ -10,10 +10,11 @@ pub fn process_repositories(
     output_dir: &str,
     user_or_org: &str,
     gitea_config: Option<&GiteaConfig>,
+    new_only: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     for repo in repos {
         println!("Processing repository: {}/{}", user_or_org, repo);
-        process_repository(repo, output_dir, user_or_org, gitea_config)?;
+        process_repository(repo, output_dir, user_or_org, gitea_config, new_only)?;
     }
     Ok(())
 }
@@ -24,12 +25,15 @@ fn process_repository(
     output_dir: &str,
     user_or_org: &str,
     gitea_config: Option<&GiteaConfig>,
+    new_only: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let repo_path = format!("{}/{}.git", output_dir, repo);
     let repo_dir = Path::new(&repo_path);
 
     if repo_dir.exists() {
-        git::update_repo_with_lfs(&repo_path, repo)?;
+        if !new_only {
+            git::update_repo_with_lfs(&repo_path, repo)?;
+        }
     } else {
         github::clone_with_mirror(user_or_org, repo, &repo_path)?;
     }
