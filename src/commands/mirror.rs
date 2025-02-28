@@ -1,7 +1,7 @@
 use crate::actions;
 use crate::config::{Config, GiteaConfig};
 use crate::gitea::{check_repo_exists, create_org_if_no_conflict, create_repo, push};
-use crate::github::get_repositories;
+use crate::github::{get_repositories, get_starred_repositories};
 use std::path::Path;
 
 pub fn execute(
@@ -19,6 +19,16 @@ pub fn execute(
     // Process individual repositories
     for full_repo_name in &config.repositories {
         process_individual_repo(full_repo_name, output_dir, config.gitea.as_ref(), new_only)?;
+    }
+
+    // Process starred repositories if enabled in config
+    if config.include_starred {
+        println!("Processing starred repositories (enabled in config):");
+        let starred_repos = get_starred_repositories()?;
+        for full_repo_name in &starred_repos {
+            println!("{}", full_repo_name);
+            process_individual_repo(full_repo_name, output_dir, config.gitea.as_ref(), new_only)?;
+        }
     }
 
     // Create Gitea organizations and repositories if configuration is provided
@@ -106,6 +116,35 @@ fn process_gitea_tasks(
             let user_or_org = split[0];
             let repo = split[1];
             process_gitea_repo(gitea_config, user_or_org, repo, output_dir)?;
+        }
+    }
+
+    // Process starred repositories for Gitea upload if enabled in config
+    if config.include_starred {
+        let starred_repos = get_starred_repositories()?;
+        for full_repo_name in &starred_repos {
+            let split: Vec<&str> = full_repo_name.split('/').collect();
+            if split.len() == 2 {
+                let user_or_org = split[0];
+                let repo = split[1];
+                
+                // Create org if needed for starred repo
+                match create_org_if_no_conflict(&gitea_config.url, &gitea_config.token, user_or_org) {
+                    Ok(created) => {
+                        if created {
+                            println!("Created organization {} in Gitea for starred repo.", user_or_org);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Error while checking/creating organization {} for starred repo: {}",
+                            user_or_org, e
+                        );
+                    }
+                }
+                
+                process_gitea_repo(gitea_config, user_or_org, repo, output_dir)?;
+            }
         }
     }
 

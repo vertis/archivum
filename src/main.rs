@@ -31,44 +31,8 @@ fn main() {
                 ),
         )
         .subcommand(
-            Command::new("mirror-starred")
-                .about("Mirrors starred repositories based on the configuration file")
-                .arg(
-                    Arg::new("config")
-                        .short('c')
-                        .long("config")
-                        .value_name("CONFIG_FILE")
-                        .help("Specifies the path to the configuration file")
-                        .default_value("config.toml"),
-                )
-                .arg(
-                    Arg::new("new-only")
-                        .long("new-only")
-                        .help("Only download repositories that don't exist locally")
-                        .action(clap::ArgAction::SetTrue),
-                ),
-        )
-        .subcommand(
             Command::new("download")
                 .about("Downloads repositories based on the configuration file")
-                .arg(
-                    Arg::new("config")
-                        .short('c')
-                        .long("config")
-                        .value_name("CONFIG_FILE")
-                        .help("Specifies the path to the configuration file")
-                        .default_value("config.toml"),
-                )
-                .arg(
-                    Arg::new("new-only")
-                        .long("new-only")
-                        .help("Only download repositories that don't exist locally")
-                        .action(clap::ArgAction::SetTrue),
-                ),
-        )
-        .subcommand(
-            Command::new("download-starred")
-                .about("Downloads starred repositories based on the configuration file")
                 .arg(
                     Arg::new("config")
                         .short('c')
@@ -100,18 +64,12 @@ fn main() {
 
     match matches.subcommand() {
         Some(("mirror", sub_matches)) => execute_command(sub_matches, commands::mirror::execute),
-        Some(("mirror-starred", sub_matches)) => {
-            execute_command(sub_matches, commands::mirror_starred::execute)
-        }
         Some(("download", sub_matches)) => {
             execute_command(sub_matches, commands::download::execute)
         }
-        Some(("download-starred", sub_matches)) => {
-            execute_command(sub_matches, commands::download_starred::execute)
-        }
         Some(("upload", sub_matches)) => execute_command(sub_matches, commands::upload::execute),
         _ => {
-            eprintln!("No valid subcommand was used. Use 'archivum mirror', 'archivum mirror-starred', 'archivum download', 'archivum download-starred', or 'archivum upload' to run the commands.");
+            eprintln!("No valid subcommand was used. Use 'archivum mirror', 'archivum download', or 'archivum upload' to run the commands.");
             std::process::exit(1);
         }
     }

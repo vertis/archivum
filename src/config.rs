@@ -8,6 +8,8 @@ pub struct Config {
     pub organizations: Vec<String>,
     pub repositories: Vec<String>,
     pub output_dir: String,
+    #[serde(default)]
+    pub include_starred: bool,
     pub gitea: Option<GiteaConfig>,
 }
 

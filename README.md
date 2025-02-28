@@ -19,7 +19,6 @@ Through features like automated mirroring and the ability to upload to alternati
 ## Features
 
 - **Download Repositories**: Download all repositories for a specified user or organization.
-- **Download Starred Repositories**: Download all starred repositories of the authenticated user.
 - **Upload Repositories**: Upload mirrored repositories to a specified destination.
 - **Repository Management**: Automatically create organizations and repositories if they do not exist at the destination.
 
@@ -42,39 +41,27 @@ cargo build --release
 
 ## Usage
 
-Archivum supports three main commands: `mirror`, `mirror-starred`, and `download`. Each command can be run with an optional configuration file. If no configuration file is specified, it will use the default `config.toml` in the current directory.
+Archivum supports several commands for mirroring and downloading repositories. Each command can be run with an optional configuration file. If no configuration file is specified, it will use the default `config.toml` in the current directory.
 
 ### Mirror Repositories
 
 To mirror repositories based on the configuration file:
 
 ```bash
-cargo run -- mirror [-c <CONFIG_FILE>]
+cargo run -- mirror [-c <CONFIG_FILE>] [--new-only]
 ```
 
-### Mirror Starred Repositories
-
-To mirror starred repositories based on the configuration file:
-
-```bash
-cargo run -- mirror-starred [-c <CONFIG_FILE>]
-```
-
-### Download Starred Repositories
-
-To download starred repositories based on the configuration file:
-
-```bash
-cargo run -- download-starred [-c <CONFIG_FILE>]
-```
+If you've set `include_starred = true` in your config, this will also mirror your starred repositories.
 
 ### Download Repositories
 
 To download repositories based on the configuration file:
 
 ```bash
-cargo run -- download [-c <CONFIG_FILE>]
+cargo run -- download [-c <CONFIG_FILE>] [--new-only]
 ```
+
+If you've set `include_starred = true` in your config, this will also download your starred repositories.
 
 ### Upload Repositories
 
@@ -99,6 +86,9 @@ organizations = ["org1", "org2"]
 
 # List of specific repositories to mirror (in the format "owner/repo")
 repositories = ["owner1/repo1", "owner2/repo2"]
+
+# Whether to include your starred repositories (true/false)
+include_starred = false
 
 # Output directory for mirrored repositories
 output_dir = "/path/to/output/directory"
