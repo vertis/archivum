@@ -31,6 +31,8 @@ Through features like automated mirroring and the ability to upload to alternati
 
 ## Installation
 
+### From Source
+
 Clone the repository and build the project:
 
 ```bash
@@ -38,6 +40,48 @@ git clone https://github.com/vertis/archivum.git
 cd archivum
 cargo build --release
 ```
+
+### From Releases
+
+You can download pre-built binaries for your platform from the [GitHub Releases page](https://github.com/vertis/archivum/releases).
+
+## Releases and Deployment
+
+This project uses GitHub Actions to automatically build and release binaries for multiple platforms when a new release tag is pushed.
+
+### Supported Platforms
+
+- Linux (AMD64 and ARM64)
+- macOS (AMD64 and ARM64)
+- Windows (AMD64)
+
+### Creating a Release
+
+To create a new release:
+
+1. Tag the commit you want to release:
+
+   ```bash
+   git tag -a v0.1.0 -m "Release v0.1.0"
+   ```
+
+2. Push the tag to GitHub:
+
+   ```bash
+   git push origin v0.1.0
+   ```
+
+3. GitHub Actions will automatically build the binaries for all platforms and attach them to the release.
+
+### Building for Specific Platforms
+
+You can use the included build script to build for a specific target:
+
+```bash
+./scripts/build.sh x86_64-unknown-linux-gnu
+```
+
+If no target is specified, it will build for your current architecture.
 
 ## Usage
 
