@@ -81,6 +81,14 @@ You can use the included build script to build for a specific target:
 ./scripts/build.sh x86_64-unknown-linux-gnu
 ```
 
+For Linux builds, you can use musl targets for better portability across different Linux distributions:
+
+```bash
+./scripts/build.sh x86_64-unknown-linux-gnu true
+```
+
+This creates statically linked binaries that don't depend on specific glibc versions, making them more portable across different Linux distributions.
+
 If no target is specified, it will build for your current architecture.
 
 ## Usage
