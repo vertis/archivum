@@ -1,6 +1,7 @@
 use crate::config::GiteaConfig;
 use duct::cmd;
 use reqwest::blocking::Client;
+use url::Url;
 
 pub fn create_org(url: &str, token: &str, org_name: &str) -> bool {
     let client = Client::new();
@@ -121,14 +122,24 @@ pub fn push(
     org_name: &str,
     repo_name: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let authenticated_url = format!(
-        "http://{}:{}@{}/{}/{}.git",
-        config.username,
-        config.password,
-        config.url.trim_start_matches("http://"),
-        org_name,
-        repo_name
-    );
+    let mut push_url = Url::parse(&config.url)?;
+    {
+        let mut segments = push_url
+            .path_segments_mut()
+            .map_err(|_| "Gitea URL must be absolute")?;
+        segments.pop_if_empty();
+        let repo_segment = format!("{}.git", repo_name);
+        segments.extend([org_name, repo_segment.as_str()]);
+    }
+
+    push_url
+        .set_username(&config.username)
+        .map_err(|_| "invalid username for Gitea URL")?;
+    push_url
+        .set_password(Some(&config.password))
+        .map_err(|_| "invalid password for Gitea URL")?;
+
+    let authenticated_url: String = push_url.into();
     cmd!(
         "git",
         "--git-dir",

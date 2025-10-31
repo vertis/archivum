@@ -8,7 +8,7 @@ pub fn update_repo_with_lfs(
     cmd!("git", "--git-dir", repo_path, "fetch", "--all").run()?;
 
     // Handle LFS objects after fetching changes
-    cmd!("git", "lfs", "fetch", "--all", repo_path).run()?;
+    cmd!("git", "--git-dir", repo_path, "lfs", "fetch", "--all").run()?;
 
     Ok(())
 }

@@ -1,6 +1,4 @@
 use duct::cmd;
-use serde_json::Value;
-use std::process::Command;
 
 pub fn get_starred_repositories() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let output = cmd!(
@@ -19,30 +17,23 @@ pub fn get_starred_repositories() -> Result<Vec<String>, Box<dyn std::error::Err
 }
 
 pub fn get_repositories(user_or_org: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let output = Command::new("gh")
-        .args(&["api", &format!("users/{}/repos", user_or_org), "--paginate"])
-        .output()?;
+    let output = cmd!(
+        "gh",
+        "api",
+        &format!("users/{}/repos", user_or_org),
+        "--paginate",
+        "-q",
+        ".[].name"
+    )
+    .read()?;
 
-    if !output.status.success() {
-        return Err(format!(
-            "GitHub CLI command failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        )
-        .into());
-    }
+    let repos = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| line.to_string())
+        .collect::<Vec<String>>();
 
-    let stdout = String::from_utf8(output.stdout)?;
-    let repos: Value = serde_json::from_str(&stdout)?;
-
-    if let Value::Array(repos) = repos {
-        let repos = repos
-            .into_iter()
-            .filter_map(|repo| repo["name"].as_str().map(|s| s.to_string()))
-            .collect();
-        Ok(repos)
-    } else {
-        Err("Unexpected response format from GitHub API".into())
-    }
+    Ok(repos)
 }
 
 // clone with --mirror and lfs, we should probably make this more generic at some point
@@ -61,8 +52,7 @@ pub fn clone_with_mirror(
     .run()?;
 
     // Initialize and fetch LFS objects after cloning
-    cmd!("git", "lfs", "install").run()?;
-    cmd!("git", "lfs", "fetch", "--all", repo_path).run()?;
+    cmd!("git", "--git-dir", repo_path, "lfs", "fetch", "--all").run()?;
 
     Ok(())
 }

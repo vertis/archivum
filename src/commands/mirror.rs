@@ -127,12 +127,16 @@ fn process_gitea_tasks(
             if split.len() == 2 {
                 let user_or_org = split[0];
                 let repo = split[1];
-                
+
                 // Create org if needed for starred repo
-                match create_org_if_no_conflict(&gitea_config.url, &gitea_config.token, user_or_org) {
+                match create_org_if_no_conflict(&gitea_config.url, &gitea_config.token, user_or_org)
+                {
                     Ok(created) => {
                         if created {
-                            println!("Created organization {} in Gitea for starred repo.", user_or_org);
+                            println!(
+                                "Created organization {} in Gitea for starred repo.",
+                                user_or_org
+                            );
                         }
                     }
                     Err(e) => {
@@ -142,7 +146,7 @@ fn process_gitea_tasks(
                         );
                     }
                 }
-                
+
                 process_gitea_repo(gitea_config, user_or_org, repo, output_dir)?;
             }
         }

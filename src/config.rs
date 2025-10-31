@@ -44,7 +44,7 @@ mod tests {
             output_dir = "/tmp/output"
 
             [gitea]
-            api_url = "https://gitea.example.com"
+            url = "https://gitea.example.com"
             token = "abcdef123456"
             username = "testuser"
             password = "testpassword"
@@ -59,12 +59,15 @@ mod tests {
         assert_eq!(config.organizations, vec!["org1", "org2"]);
         assert_eq!(config.repositories, vec!["repo1", "repo2"]);
         assert_eq!(config.output_dir, "/tmp/output");
-        assert_eq!(config.gitea, Some(GiteaConfig {
-            url: "https://gitea.example.com".to_string(),
-            token: "abcdef123456".to_string(),
-            username: "testuser".to_string(),
-            password: "testpassword".to_string(),
-        }));
+        assert_eq!(
+            config.gitea,
+            Some(GiteaConfig {
+                url: "https://gitea.example.com".to_string(),
+                token: "abcdef123456".to_string(),
+                username: "testuser".to_string(),
+                password: "testpassword".to_string(),
+            })
+        );
     }
 
     #[test]
