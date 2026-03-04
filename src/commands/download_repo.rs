@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 pub fn execute(
     sub_matches: &ArgMatches,
-    config: &Config,
+    _config: &Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let user_or_org = sub_matches.get_one::<String>("user-org").expect("required");
     let repo_name = sub_matches.get_one::<String>("repo").expect("required");

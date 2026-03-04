@@ -4,7 +4,7 @@ use glob::glob;
 use std::path::Path;
 
 pub fn execute(
-    matches: &clap::ArgMatches,
+    _matches: &clap::ArgMatches,
     config: &Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let output_dir = Path::new(&config.output_dir);
@@ -19,7 +19,7 @@ pub fn execute(
 }
 
 fn process_gitea_tasks(
-    config: &Config,
+    _config: &Config,
     output_dir: &Path,
     gitea_config: &GiteaConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
